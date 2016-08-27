@@ -12,13 +12,7 @@ import logging
 
 
 def main():
-     bot_initializer()
-     connect_to_wifi()
-##     create_wifi_scheme()
-#    bot_initializer()
-#    data = make_photo()
-#    pathtophoto = re.findall('fuse_d(.+?)"', data)[0]
-#    downloadphoto(pathtophoto)
+    bot_initializer()
 
 
 def make_photo():
@@ -47,17 +41,23 @@ def make_photo():
         responsedata = srv.recv(512)
     return responsedata
 
+
 def connect_to_wifi(name):
-     scheme = Scheme.find('wlan0',name)
-     scheme.activate()
+    scheme = Scheme.find('wlan0', name)
+    try:
+        scheme.activate()
+    except IOError:
+        print("trying to recconect")
+        scheme.activate()
 
-def create_wifi_scheme(name,password):
-##     cell = Cell.all('wlan0')[0]
-##     scheme = Scheme.for_cell('wlan0','YDXJ_5327678', cell, '1234567890')
-##     scheme.save()
 
-def downloadphoto(path):
-    filename = re.findall('(?:.*?\/){3}(.*)', path)[0]
+def create_wifi_scheme(name, password):
+    cell = Cell.all('wlan0')[0]
+    scheme = Scheme.for_cell('wlan0', name, cell, password)
+    scheme.save()
+
+
+def downloadphoto(path, filename):
     url = "http://" + camaddr + path
     r = requests.get(url, stream=True)
     if r.status_code == 200:
@@ -67,15 +67,22 @@ def downloadphoto(path):
 
 
 def start(bot, update):
-    bot.sendMessage(chat_id=update.message.chat_id, text="I'm a bot, to make photo please print !")
+    bot.sendMessage(chat_id=update.message.chat_id, text="I'm a bot, to make and see photo please print 'photo'!")
 
 
 def echo(bot, update):
-     bot.sendMessage(chat_id=update.message.chat_id, text="")
-     if 'Hi' in update.message.text:
-          bot.sendPhoto(chat_id=update.message.chat_id, photo=open('F:\YDXJ0788.jpg', 'rb'))
-     else:
-          bot.sendMessage(chat_id=update.message.chat_id, text="Privet")
+    bot.sendMessage(chat_id=update.message.chat_id, text="")
+    if 'Photo' in update.message.text:
+        connect_to_wifi("camera")
+        data = make_photo()
+        path = re.findall('fuse_d(.+?)"', data)[0]
+        filename = re.findall('(?:.*?\/){3}(.*)', path)[0]
+        downloadphoto(path)
+        connect_to_wifi("real")
+        bot.sendPhoto(chat_id=update.message.chat_id, photo=open('/tmp/photo/' + filename, 'rb'))
+
+    else:
+        bot.sendMessage(chat_id=update.message.chat_id, text="Privet")
 
 
 def caps(bot, update, args):
