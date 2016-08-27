@@ -43,13 +43,15 @@ def make_photo():
 
 
 def connect_to_wifi(name):
-    scheme = Scheme.find('wlan0', name)
     try:
+        scheme = Scheme.find('wlan0', name)
         scheme.activate()
-    except IOError:
+        time.sleep(10)
+    except:
         print("trying to recconect")
         scheme.activate()
-
+        time.sleep(10)
+                
 
 def create_wifi_scheme(name, password):
     cell = Cell.all('wlan0')[0]
@@ -61,7 +63,7 @@ def downloadphoto(path, filename):
     url = "http://" + camaddr + path
     r = requests.get(url, stream=True)
     if r.status_code == 200:
-        with open("/tmp/photo/" + filename, 'wb') as f:
+        with open("/tmp/" + filename, 'wb') as f:
             for chunk in r.iter_content(1024):
                 f.write(chunk)
 
@@ -71,16 +73,16 @@ def start(bot, update):
 
 
 def echo(bot, update):
-    bot.sendMessage(chat_id=update.message.chat_id, text="")
-    if 'Photo' in update.message.text:
+    if 'makePhoto' in update.message.text:
+        bot.sendMessage(chat_id=update.message.chat_id,text="I need to go to make a photo for you, will be in couple of minutes")
         connect_to_wifi("camera")
         data = make_photo()
         path = re.findall('fuse_d(.+?)"', data)[0]
         filename = re.findall('(?:.*?\/){3}(.*)', path)[0]
-        downloadphoto(path)
+        downloadphoto(path, filename)
         connect_to_wifi("real")
-        bot.sendPhoto(chat_id=update.message.chat_id, photo=open('/tmp/photo/' + filename, 'rb'))
-
+        bot.sendMessage(chat_id=update.message.chat_id,text="All fine, I did the photo and I am sending it to you now")
+        bot.sendPhoto(chat_id=update.message.chat_id, photo=open('/tmp/' + filename, 'rb'))
     else:
         bot.sendMessage(chat_id=update.message.chat_id, text="Privet")
 
@@ -101,7 +103,7 @@ def bot_initializer():
     dispatcher.add_handler(caps_handler)
     dispatcher.add_handler(echo_handler)
     dispatcher.add_handler(start_handler)
-    updater.start_polling()
+    updater.start_polling(timeout=120, network_delay=60)
 
 
 if __name__ == '__main__':
